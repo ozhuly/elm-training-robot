@@ -73,13 +73,26 @@ update msg model =
             )
 
 
+gothurt : Robot.Model -> Robot.Model -> Bool
+gothurt defendingRobot shootingRobot =
+    (defendingRobot.top1 + 5 >= shootingRobot.bulletY)
+        && (defendingRobot.top1 - 5 <= shootingRobot.bulletY)
+        && (defendingRobot.left1 + 5 >= shootingRobot.bulletX)
+        && (defendingRobot.left1 - 5 <= shootingRobot.bulletX)
+        && shootingRobot.bulletExist
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
+    let
+        _ =
+            Debug.log "got hurt" (gothurt model.robot2 model.robot1)
+    in
     Sub.batch
         [ Sub.map Robot1Msg <|
-            Robot.subscriptions model.robot1 (model.robot1.top1 == model.robot2.bulletY && model.robot1.left1 == model.robot2.bulletX)
+            Robot.subscriptions model.robot1 (gothurt model.robot1 model.robot2)
         , Sub.map Robot2Msg <|
-            Robot.subscriptions model.robot2 (model.robot2.top1 == model.robot1.bulletY && model.robot2.left1 == model.robot1.bulletX)
+            Robot.subscriptions model.robot2 (gothurt model.robot2 model.robot1)
         ]
 
 

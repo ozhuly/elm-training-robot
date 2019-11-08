@@ -28,8 +28,10 @@ type alias Model =
     , heading : Float
     , bulletHeading : Float
     , hp : Int
-    , speedX : Float
-    , speedY : Float
+    , speedUp : Float
+    , speedDown : Float
+    , speedRight : Float
+    , speedLeft : Float
     }
 
 
@@ -60,8 +62,10 @@ init left top upkey leftkey downkey rightkey shootkey =
     , heading = 0
     , bulletHeading = 0
     , hp = 3
-    , speedX = 0
-    , speedY = 0
+    , speedUp = 0
+    , speedDown = 0
+    , speedRight = 0
+    , speedLeft = 0
     }
 
 
@@ -85,29 +89,29 @@ update msg model =
         KeyDown input ->
             if input == model.upkey then
                 { model
-                    | speedY = speed
+                    | speedUp = speed
                 }
 
             else if input == model.downkey then
                 { model
-                    | speedY = -speed
+                    | speedDown = -speed
                 }
 
             else if input == model.leftkey then
                 { model
-                    | speedX = -speed
+                    | speedLeft = -speed
                 }
 
             else if input == model.rightkey then
                 { model
-                    | speedX = speed
+                    | speedRight = speed
                 }
 
             else if input == model.shootkey then
                 { model
                     | bulletExist = True
-                    , bulletSpeedX = bulletspeed * Basics.cos (Basics.degrees model.heading)
-                    , bulletSpeedY = -bulletspeed * Basics.sin (Basics.degrees model.heading)
+                    , bulletSpeedX = bulletspeed * Basics.cos model.heading
+                    , bulletSpeedY = bulletspeed * Basics.sin model.heading
                     , bulletHeading = model.heading
                 }
 
@@ -117,22 +121,22 @@ update msg model =
         KeyUp input ->
             if input == model.upkey then
                 { model
-                    | speedY = 0
+                    | speedUp = 0
                 }
 
             else if input == model.downkey then
                 { model
-                    | speedY = 0
+                    | speedDown = 0
                 }
 
             else if input == model.leftkey then
                 { model
-                    | speedX = 0
+                    | speedLeft = 0
                 }
 
             else if input == model.rightkey then
                 { model
-                    | speedX = 0
+                    | speedRight = 0
                 }
 
             else
@@ -140,8 +144,8 @@ update msg model =
 
         RobotMove _ ->
             { model
-                | top1 = model.top1 - model.speedY
-                , left1 = model.left1 + model.speedX
+                | top1 = model.top1 - model.speedUp - model.speedDown
+                , left1 = model.left1 + model.speedRight + model.speedLeft
             }
 
         BulletMove _ ->
@@ -162,11 +166,11 @@ update msg model =
             { model | bulletX = model.left1, bulletY = model.top1 }
 
         Rotate _ ->
-            if model.speedX == 0 && model.speedY == 0 then
+            if model.speedUp + model.speedDown == 0 && model.speedRight + model.speedLeft == 0 then
                 model
 
             else
-                { model | heading = (Basics.atan2 -model.speedY model.speedX - model.heading) * 0.15 + model.heading }
+                { model | heading = (Basics.atan2 -(model.speedUp + model.speedDown) (model.speedRight + model.speedLeft) - model.heading) * 0.15 + model.heading }
 
         HPdown _ ->
             { model | hp = model.hp - 1 }
@@ -182,7 +186,7 @@ subscriptions model gotHurt =
                 , Time.every 10 BulletMove
                 , Time.every 10 Rotate
                 , Time.every 10 RobotMove
-                , Time.every 10 HPdown
+                , Time.every 9 HPdown
                 ]
 
         else
@@ -193,6 +197,16 @@ subscriptions model gotHurt =
                 , Time.every 10 Rotate
                 , Time.every 10 RobotMove
                 ]
+
+    else if gotHurt then
+        Sub.batch
+            [ Browser.Events.onKeyDown (Json.Decode.map KeyDown <| Json.Decode.field "key" Json.Decode.string)
+            , Browser.Events.onKeyUp (Json.Decode.map KeyUp <| Json.Decode.field "key" Json.Decode.string)
+            , Time.every 10 BulletMove
+            , Time.every 10 Rotate
+            , Time.every 10 RobotMove
+            , Time.every 9 HPdown
+            ]
 
     else
         Sub.batch
@@ -210,7 +224,7 @@ view model color number =
         Html.div []
             [ Html.div
                 [ style "position" "absolute"
-                , style "background-color" "gray"
+                , style "background-color" "black"
                 , style "top" "0%"
                 , style "left" "0%"
                 , style "border" "solid"
@@ -262,7 +276,7 @@ view model color number =
                 , style "background-color" "gray"
                 , style "top" ((++) (String.fromFloat model.top1) "%")
                 , style "left" ((++) (String.fromFloat model.left1) "%")
-                , style "transform" <| (++) "rotate(" <| (++) (String.fromFloat model.heading) "deg)"
+                , style "transform" <| (++) "rotate(" <| (++) (String.fromFloat model.heading) "rad)"
                 , style "border" "solid"
                 , style "border-radius" "3px"
                 , style "border-color" color
@@ -276,7 +290,7 @@ view model color number =
                 , style "left" ((++) (String.fromFloat model.bulletX) "%")
                 , style "height" "1%"
                 , style "width" "1%"
-                , style "transform" <| (++) "rotate(" <| (++) (String.fromFloat model.bulletHeading) "deg)"
+                , style "transform" <| (++) "rotate(" <| (++) (String.fromFloat model.bulletHeading) "rad)"
                 ]
                 []
             ]
